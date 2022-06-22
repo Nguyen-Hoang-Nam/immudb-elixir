@@ -7,7 +7,9 @@ defmodule ImmudbElixir.MixProject do
       version: "0.1.0",
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      package: package(),
+      description: "Elixir client for ImmuDB"
     ]
   end
 
@@ -26,5 +28,14 @@ defmodule ImmudbElixir.MixProject do
       {:protobuf, "~> 0.8.0"},
       {:google_protos, "~> 0.1"}
     ]
+  end
+
+  defp package do
+    %{
+      maintainers: ["Nguyen Hoang Nam"],
+      licenses: ["Apache 2"],
+      links: %{"GitHub" => "https://github.com/Nguyen-Hoang-Nam/immudb-elixir"},
+      files: ~w(mix.exs README.md lib config LICENSE .formatter.exs)
+    }
   end
 end
