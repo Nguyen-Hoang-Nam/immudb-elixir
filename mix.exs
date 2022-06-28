@@ -23,7 +23,7 @@ defmodule ImmudbElixir.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:grpc, "~> 0.5.0", hex: :grpc_update},
+      {:grpc, git: "https://github.com/Nguyen-Hoang-Nam/grpc.git"},
       {:cowlib, "~> 2.11.0"},
       {:protobuf, "~> 0.8.0"},
       {:google_protos, "~> 0.1"}
