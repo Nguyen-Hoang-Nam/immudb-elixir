@@ -45,10 +45,9 @@ defmodule Immudb do
          {:is_userinfo, true} <- {:is_userinfo, userinfo |> length > 0} do
       {username, password} =
         userinfo
-        |> length()
         |> case do
-          1 -> {userinfo |> Enum.at(0), ""}
-          2 -> {userinfo |> Enum.at(0), userinfo |> Enum.at(1)}
+          [username] -> {username, ""}
+          [username, password] -> {username, password}
           _ -> {"", ""}
         end
 

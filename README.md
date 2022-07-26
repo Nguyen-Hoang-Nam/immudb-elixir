@@ -19,7 +19,7 @@ end
 You can connect to Immudb in 2 ways
 
 ```elixir
-immudb = Immudb.new(
+{:ok, immudb} = Immudb.new(
     host: host,
     port: port,
     username: username,
@@ -29,7 +29,7 @@ immudb = Immudb.new(
 ```
 
 ```elixir
-immudb = Immudb.new(
+{:ok, immudb} = Immudb.new(
     url: "immudb://user:pass@host:port/dbname"
 )
 ```
