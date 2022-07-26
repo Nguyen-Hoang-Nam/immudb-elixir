@@ -26,7 +26,7 @@ defmodule ImmudbElixir.MixProject do
       {:grpc, git: "https://github.com/Nguyen-Hoang-Nam/grpc.git"},
       {:cowlib, "~> 2.11.0"},
       {:protobuf, "~> 0.10.0"},
-      {:google_protos, "~> 0.1"}
+      {:google_protos, "~> 0.2"}
     ]
   end
 
