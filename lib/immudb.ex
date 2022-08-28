@@ -4,9 +4,19 @@ defmodule Immudb do
   alias Immudb.Schema
   alias Immudb.Schema.ImmuService.Stub
   alias Google.Protobuf
-  alias Immudb.Socket
   alias Immudb.Client
+  alias Immudb.Socket
+  alias Immudb.KV
+  alias Immudb.VerifiableTx
 
+  @spec new(url: String.t()) :: {:ok, Socket.t()} | {:error, String.t()}
+  @spec new(
+          host: String.t(),
+          port: integer(),
+          username: String.t(),
+          password: String.t(),
+          database: String.t()
+        ) :: {:ok, Socket.t()} | {:error, String.t()}
   def new(v) do
     v |> Client.new()
   end
@@ -15,61 +25,104 @@ defmodule Immudb do
     %{authorization: "Bearer #{socket.token}", content_type: "application/grpc"}
   end
 
-  def list_users(socket) do
+  @spec list_users(Socket.t()) ::
+          {:error, String.t() | atom()} | {:ok, [User.t()]}
+  def list_users(%Socket{} = socket) do
     socket |> Client.list_users()
   end
 
-  def create_user(socket, params) do
-    socket |> Client.create_user(params)
+  def list_users(_) do
+    {:error, :invalid_params}
   end
 
-  def change_password(socket, v) do
-    socket |> Client.change_password(v)
+  @spec create_user(Socket.t(),
+          user: String.t(),
+          password: String.t(),
+          database: String.t(),
+          permission: atom()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def create_user(%Socket{} = socket,
+        user: user,
+        password: password,
+        database: database,
+        permission: permission
+      ) do
+    socket
+    |> Client.create_user(
+      user: user,
+      password: password,
+      database: database,
+      permission: permission
+    )
   end
 
-  def update_auth_config(socket, v) do
+  def create_user(_) do
+    {:error, :invalid_params}
+  end
+
+  @spec change_password(Socket.t(),
+          user: String.t(),
+          old_password: String.t(),
+          new_password: String.t()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, String.t()}
+  def change_password(%Socket{} = socket,
+        user: user,
+        old_password: old_password,
+        new_password: new_password
+      ) do
+    socket
+    |> Client.change_password(
+      user: user,
+      old_password: old_password,
+      new_password: new_password
+    )
+  end
+
+  def update_auth_config(%Socket{} = socket, v) do
     socket |> Client.update_auth_config(v)
   end
 
-  def update_mtls_confg(socket, v) do
+  def update_mtls_confg(%Socket{} = socket, v) do
     socket |> Client.update_mtls_confg(v)
   end
 
-  def login(socket, user, password) do
-    socket.channel |> Client.login(user, password)
+  @spec login(Socket.t(), String.t(), String.t()) ::
+          {:error, String.t() | atom()} | {:ok, String.t()}
+  def login(%Socket{channel: %GRPC.Channel{} = channel}, user, password) do
+    channel |> Client.login(user, password)
   end
 
-  def logout(socket) do
+  def login(_, _, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec logout(Socket.t()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def logout(%Socket{} = socket) do
     socket |> Client.logout()
   end
 
-  def set(socket, key, value) do
-    with {:ok, _} <-
-           socket.channel
-           |> Stub.set(
-             Schema.SetRequest.new(KVs: [Schema.KeyValue.new(key: key, value: value)]),
-             metadata: metadata(socket)
-           ) do
-      :ok
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+  def logout(_) do
+    {:error, :invalid_params}
   end
 
-  def verifiable_set(socket, key, value) do
-    with {:ok, _} <-
-           socket.channel
-           |> Stub.verifiable_set(
-             Schema.VerifiableSetRequest.new(
-               setRequest:
-                 Schema.SetRequest.new(KVs: [Schema.KeyValue.new(key: key, value: value)])
-             ),
-             metadata: metadata(socket)
-           ) do
-      :ok
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+  @spec set(Socket.t(), binary(), binary()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def set(%Socket{} = socket, key, value)
+      when key |> is_binary() and value |> is_binary() do
+    socket |> KV.set(key, value)
+  end
+
+  def set(_, _, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec verifiable_set(Socket.t(), binary(), binary()) ::
+          {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
+  def verifiable_set(%Socket{} = socket, key, value) do
+    socket |> KV.verifiable_set(key, value)
   end
 
   def get(socket, key) do

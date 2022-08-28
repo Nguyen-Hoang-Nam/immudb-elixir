@@ -3,6 +3,7 @@ defmodule Immudb.Database do
   alias Immudb.Schema
   alias Immudb.Schema.ImmuService.Stub
   alias Google.Protobuf
+  alias Immudb.Socket
 
   def create_database(socket, database_name) do
     with {:ok, _} <-
@@ -29,16 +30,27 @@ defmodule Immudb.Database do
     end
   end
 
-  def use_database(socket, database_name) do
-    with {:ok, response} <-
-           socket.channel
-           |> Stub.use_database(Schema.Database.new(databaseName: database_name),
-             metadata: socket |> Util.metadata()
-           ) do
-      {:ok, response.token}
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
+  @spec use_database(Socket.t(), database_name: String.t()) ::
+          {:error, String.t()} | {:ok, String.t()}
+  def use_database(%Socket{channel: %GRPC.Channel{} = channel, token: token}, database_name) do
+    channel
+    |> Stub.use_database(Schema.Database.new(databaseName: database_name),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      {:ok, %{token: token}} ->
+        {:ok, token}
+
+      _ ->
+        {:error, :unknown}
     end
+  end
+
+  def use_database(_, _) do
+    {:error, :invalid_params}
   end
 
   def compact_index(channel) do
