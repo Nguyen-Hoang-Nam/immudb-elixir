@@ -14,9 +14,9 @@ defmodule Immudb.VerifiableTx do
         tx: tx
       }) do
     %Immudb.VerifiableTx{
-      dual_proof: dual_proof,
+      dual_proof: dual_proof |> Immudb.DualProof.convert(),
       signature: signature,
-      tx: tx
+      tx: tx |> Immudb.Tx.convert()
     }
   end
 end

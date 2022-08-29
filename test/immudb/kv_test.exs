@@ -66,10 +66,33 @@ defmodule Immudb.KVTest do
 
     assert token |> Kernel.is_bitstring()
 
+    key = "test_#{:os.system_time(:millisecond)}"
+
     assert {:ok, %Immudb.TxMetaData{}} =
              socket
-             |> Immudb.set("test_#{:os.system_time(:millisecond)}", "value")
+             |> Immudb.set(key, "value")
 
-    assert {:ok, v} = socket |> Immudb.get("test_#{:os.system_time(:millisecond)}")
+    assert {:ok, %Immudb.Entry{}} = socket |> Immudb.get(key)
+  end
+
+  test "Verifiable Get" do
+    assert {:ok, %Immudb.Socket{channel: %GRPC.Channel{}, token: token} = socket} =
+             Immudb.new(
+               host: "localhost",
+               port: 3322,
+               username: "immudb",
+               password: "immudb",
+               database: "defaultdb"
+             )
+
+    assert token |> Kernel.is_bitstring()
+
+    key = "test_#{:os.system_time(:millisecond)}"
+
+    assert {:ok, %Immudb.TxMetaData{}} =
+             socket
+             |> Immudb.set(key, "value")
+
+    assert {:ok, %Immudb.VerifiableEntry{}} = socket |> Immudb.verifiable_get(key)
   end
 end

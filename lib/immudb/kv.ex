@@ -5,6 +5,7 @@ defmodule Immudb.KV do
   alias Immudb.Schema.ImmuService.Stub
   alias Immudb.TxMetaData
   alias Immudb.VerifiableTx
+  alias Immudb.Entry
 
   @spec set(Socket.t(), binary(), binary()) ::
           {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
@@ -59,7 +60,7 @@ defmodule Immudb.KV do
   end
 
   @spec get(Socket.t(), binary()) ::
-          {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
+          {:error, String.t() | atom()} | {:ok, Entry.t()}
   def get(%Socket{channel: %GRPC.Channel{} = channel, token: token}, key)
       when key |> is_binary() do
     channel
@@ -69,7 +70,7 @@ defmodule Immudb.KV do
     )
     |> case do
       {:ok, v} ->
-        {:ok, v}
+        {:ok, v |> Immudb.Entry.convert()}
 
       {:error, %GRPC.RPCError{message: message}} ->
         {:error, message}
@@ -80,6 +81,31 @@ defmodule Immudb.KV do
   end
 
   def get(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec verifiable_get(Socket.t(), binary()) ::
+          {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
+  def verifiable_get(%Socket{channel: %GRPC.Channel{} = channel, token: token}, key)
+      when key |> is_binary() do
+    channel
+    |> Stub.verifiable_get(
+      Schema.VerifiableGetRequest.new(keyRequest: Schema.KeyRequest.new(key: key)),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, v} ->
+        {:ok, v |> Immudb.VerifiableEntry.convert()}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def verifiable_get(_, _) do
     {:error, :invalid_params}
   end
 end
