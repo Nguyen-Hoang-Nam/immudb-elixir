@@ -108,4 +108,30 @@ defmodule Immudb.KV do
   def verifiable_get(_, _) do
     {:error, :invalid_params}
   end
+
+  @spec set_all(Socket.t(), [{binary(), binary()}]) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def set_all(%Socket{channel: %GRPC.Channel{} = channel, token: token}, kvs) do
+    kvs =
+      kvs
+      |> Enum.map(fn {key, value} ->
+        Schema.KeyValue.new(key: key, value: value)
+      end)
+
+    channel
+    |> Stub.set(
+      Schema.SetRequest.new(KVs: kvs),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, v} ->
+        {:ok, v |> Immudb.TxMetaData.convert()}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
 end

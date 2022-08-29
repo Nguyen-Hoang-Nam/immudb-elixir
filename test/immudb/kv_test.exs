@@ -95,4 +95,24 @@ defmodule Immudb.KVTest do
 
     assert {:ok, %Immudb.VerifiableEntry{}} = socket |> Immudb.verifiable_get(key)
   end
+
+  test "Set all" do
+    assert {:ok, %Immudb.Socket{channel: %GRPC.Channel{}, token: token} = socket} =
+             Immudb.new(
+               host: "localhost",
+               port: 3322,
+               username: "immudb",
+               password: "immudb",
+               database: "defaultdb"
+             )
+
+    assert token |> Kernel.is_bitstring()
+
+    assert {:ok, %Immudb.TxMetaData{}} =
+             socket
+             |> Immudb.set_all([
+               {"test_1_#{:os.system_time(:millisecond)}", "value 1"},
+               {"test_2_#{:os.system_time(:millisecond)}", "value 2"}
+             ])
+  end
 end

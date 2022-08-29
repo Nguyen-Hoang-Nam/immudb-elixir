@@ -9,6 +9,7 @@ defmodule Immudb do
   alias Immudb.KV
   alias Immudb.VerifiableTx
   alias Immudb.Entry
+  alias Immudb.VerifiableEntry
 
   @spec new(url: String.t()) :: {:ok, Socket.t()} | {:error, String.t()}
   @spec new(
@@ -143,8 +144,8 @@ defmodule Immudb do
   end
 
   @spec verifiable_get(Socket.t(), binary()) ::
-          {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
-  def verifiable_get(socket, key)
+          {:error, String.t() | atom()} | {:ok, VerifiableEntry.t()}
+  def verifiable_get(%Socket{} = socket, key)
       when key |> is_binary() do
     socket |> KV.verifiable_get(key)
   end
@@ -153,22 +154,10 @@ defmodule Immudb do
     {:error, :invalid_params}
   end
 
-  def set_all(socket, params) do
-    kvs =
-      for {key, value} <- params do
-        Schema.KeyValue.new(key: key, value: value)
-      end
-
-    with {:ok, _} <-
-           socket.channel
-           |> Stub.set(
-             Schema.SetRequest.new(KVs: kvs),
-             metadata: metadata(socket)
-           ) do
-      :ok
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+  @spec set_all(Socket.t(), [{binary(), binary()}]) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def set_all(%Socket{} = socket, kvs) do
+    socket |> KV.set_all(kvs)
   end
 
   def get_all(socket, keys) do
