@@ -121,21 +121,24 @@ defmodule Immudb do
 
   @spec verifiable_set(Socket.t(), binary(), binary()) ::
           {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
-  def verifiable_set(%Socket{} = socket, key, value) do
+  def verifiable_set(%Socket{} = socket, key, value)
+      when key |> is_binary() and value |> is_binary() do
     socket |> KV.verifiable_set(key, value)
   end
 
-  def get(socket, key) do
-    with {:ok, response} <-
-           socket.channel
-           |> Stub.get(
-             Schema.KeyRequest.new(key: key),
-             metadata: metadata(socket)
-           ) do
-      {:ok, response.value}
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+  def verifiable_set(_, _, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec get(Socket.t(), binary()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def get(%Socket{} = socket, key)
+      when key |> is_binary() do
+    socket |> KV.get(key)
+  end
+
+  def get(_, _) do
+    {:error, :invalid_params}
   end
 
   def verifiable_get(socket, key) do

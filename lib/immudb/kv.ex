@@ -33,7 +33,8 @@ defmodule Immudb.KV do
 
   @spec verifiable_set(Socket.t(), binary(), binary()) ::
           {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
-  def verifiable_set(%Socket{channel: %GRPC.Channel{} = channel, token: token}, key, value) do
+  def verifiable_set(%Socket{channel: %GRPC.Channel{} = channel, token: token}, key, value)
+      when key |> is_binary() and value |> is_binary() do
     channel
     |> Stub.verifiable_set(
       Schema.VerifiableSetRequest.new(
@@ -54,6 +55,31 @@ defmodule Immudb.KV do
   end
 
   def verifiable_set(_, _, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec get(Socket.t(), binary()) ::
+          {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
+  def get(%Socket{channel: %GRPC.Channel{} = channel, token: token}, key)
+      when key |> is_binary() do
+    channel
+    |> Stub.get(
+      Schema.KeyRequest.new(key: key),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, v} ->
+        {:ok, v}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def get(_, _) do
     {:error, :invalid_params}
   end
 end
