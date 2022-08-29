@@ -110,7 +110,7 @@ defmodule Immudb.KV do
   end
 
   @spec set_all(Socket.t(), [{binary(), binary()}]) ::
-          {:error, String.t() | atom()} | {:ok, nil}
+          {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
   def set_all(%Socket{channel: %GRPC.Channel{} = channel, token: token}, kvs) do
     kvs =
       kvs

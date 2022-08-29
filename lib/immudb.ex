@@ -10,6 +10,7 @@ defmodule Immudb do
   alias Immudb.VerifiableTx
   alias Immudb.Entry
   alias Immudb.VerifiableEntry
+  alias Immudb.TxMetaData
 
   @spec new(url: String.t()) :: {:ok, Socket.t()} | {:error, String.t()}
   @spec new(
@@ -111,7 +112,7 @@ defmodule Immudb do
   end
 
   @spec set(Socket.t(), binary(), binary()) ::
-          {:error, String.t() | atom()} | {:ok, nil}
+          {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
   def set(%Socket{} = socket, key, value)
       when key |> is_binary() and value |> is_binary() do
     socket |> KV.set(key, value)
@@ -155,7 +156,7 @@ defmodule Immudb do
   end
 
   @spec set_all(Socket.t(), [{binary(), binary()}]) ::
-          {:error, String.t() | atom()} | {:ok, nil}
+          {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
   def set_all(%Socket{} = socket, kvs) do
     socket |> KV.set_all(kvs)
   end
