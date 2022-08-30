@@ -364,4 +364,52 @@ defmodule Immudb.KV do
   def set_reference(_, _) do
     {:error, :invalid_params}
   end
+
+  @spec set_reference(Socket.t(),
+          key: binary(),
+          referenced_key: binary(),
+          at_tx: integer(),
+          bound_ref: boolean(),
+          no_wait: boolean(),
+          prove_since_tx: integer()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.VerifiableTx.t()}
+  def verifiable_set_reference(%Socket{channel: %GRPC.Channel{} = channel, token: token},
+        key: key,
+        referenced_key: referenced_key,
+        at_tx: at_tx,
+        bound_ref: bound_ref,
+        no_wait: no_wait,
+        prove_since_tx: prove_since_tx
+      ) do
+    channel
+    |> Stub.verifiable_set_reference(
+      Schema.VerifiableReferenceRequest.new(
+        referenceRequest:
+          Schema.ReferenceRequest.new(
+            key: key,
+            referencedKey: referenced_key,
+            atTx: at_tx,
+            boundRef: bound_ref,
+            noWait: no_wait
+          ),
+        proveSinceTx: prove_since_tx
+      ),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, v} ->
+        {:ok, v |> Immudb.Schemas.VerifiableTx.convert()}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def verifiable_set_reference(_, _) do
+    {:error, :invalid_params}
+  end
 end

@@ -311,20 +311,31 @@ defmodule Immudb do
     )
   end
 
-  def verifiable_set_reference(channel, params) do
-    channel
-    |> Stub.verifiable_set_reference(
-      Schema.VerifiableReferenceRequest.new(
-        referenceRequest:
-          Schema.ReferenceRequest.new(
-            key: params.key,
-            referencedKey: params.referenced_key,
-            atTx: params.at_tx,
-            boundRef: params.bound_ref,
-            noWait: params.no_wait
-          ),
-        proveSinceTx: params.prove_since_tx
-      )
+  @spec set_reference(Socket.t(),
+          key: binary(),
+          referenced_key: binary(),
+          at_tx: integer(),
+          bound_ref: boolean(),
+          no_wait: boolean(),
+          prove_since_tx: integer()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.VerifiableTx.t()}
+  def verifiable_set_reference(socket,
+        key: key,
+        referenced_key: referenced_key,
+        at_tx: at_tx,
+        bound_ref: bound_ref,
+        no_wait: no_wait,
+        prove_since_tx: prove_since_tx
+      ) do
+    socket
+    |> KV.verifiable_set_reference(
+      key: key,
+      referenced_key: referenced_key,
+      at_tx: at_tx,
+      bound_ref: bound_ref,
+      no_wait: no_wait,
+      prove_since_tx: prove_since_tx
     )
   end
 
