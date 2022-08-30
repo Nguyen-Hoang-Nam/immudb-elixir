@@ -4,7 +4,7 @@ defmodule ImmudbElixir.MixProject do
   def project do
     [
       app: :immudb_elixir,
-      version: "1.0.0",
+      version: "0.2.1",
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -26,7 +26,8 @@ defmodule ImmudbElixir.MixProject do
       {:grpc, "~> 0.5.0"},
       {:cowlib, "~> 2.11.0"},
       {:protobuf, "~> 0.9.0"},
-      {:google_protos, "~> 0.2"}
+      {:google_protos, "~> 0.2"},
+			{:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
 
