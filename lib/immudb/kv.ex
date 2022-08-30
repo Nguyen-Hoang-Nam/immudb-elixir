@@ -1,4 +1,5 @@
 defmodule Immudb.KV do
+  alias Google.Protobuf
   alias Immudb.Socket
   alias Immudb.Util
   alias Immudb.Schema
@@ -149,7 +150,7 @@ defmodule Immudb.KV do
     )
     |> case do
       {:ok, v} ->
-        {:ok, v}
+        {:ok, v |> Immudb.Schemas.Entries.convert()}
 
       {:error, %GRPC.RPCError{message: message}} ->
         {:error, message}
@@ -160,6 +161,73 @@ defmodule Immudb.KV do
   end
 
   def get_all(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec scan(Socket.t(),
+          seek_key: binary(),
+          prefix: binary(),
+          desc: boolean(),
+          limit: integer(),
+          since_tx: integer(),
+          no_wait: boolean()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.EntryCount.t()}
+  def scan(%Socket{channel: %GRPC.Channel{} = channel, token: token},
+        seek_key: seek_key,
+        prefix: prefix,
+        desc: desc,
+        limit: limit,
+        since_tx: since_tx,
+        no_wait: no_wait
+      ) do
+    channel
+    |> Stub.scan(
+      Schema.ScanRequest.new(
+        seekKey: seek_key,
+        prefix: prefix,
+        desc: desc,
+        limit: limit,
+        sinceTx: since_tx,
+        noWait: no_wait
+      ),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, v} ->
+        {:ok, v}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def scan(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec count(Socket.t(), [binary()]) ::
+          {:error, String.t() | atom()} | {:ok, EntryCount.t()}
+  def count(%Socket{channel: %GRPC.Channel{} = channel, token: token}, prefix) do
+    channel
+    |> Stub.count(Schema.KeyPrefix.new(prefix: prefix), metadata: token |> Util.metadata())
+  end
+
+  def count(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec count_all(Socket.t()) ::
+          {:error, String.t() | atom()} | {:ok, EntryCount.t()}
+  def count_all(%Socket{channel: %GRPC.Channel{} = channel, token: token}) do
+    channel
+    |> Stub.count_all(Protobuf.Empty.new(), metadata: token |> Util.metadata())
+  end
+
+  def count_all(_) do
     {:error, :invalid_params}
   end
 end

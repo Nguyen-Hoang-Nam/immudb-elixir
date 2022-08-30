@@ -15,6 +15,8 @@ defmodule Immudb do
   alias Immudb.Util
   alias Immudb.Database
   alias Immudb.Sql
+  alias Immudb.Schemas.Entries
+  alias Immudb.Schemas.EntryCount
 
   @spec new(url: String.t()) :: {:ok, Socket.t()} | {:error, String.t()}
   @spec new(
@@ -170,21 +172,9 @@ defmodule Immudb do
   end
 
   @spec get_all(Socket.t(), [binary()]) ::
-          {:error, String.t() | atom()} | {:ok, nil}
+          {:error, String.t() | atom()} | {:ok, Entries.t()}
   def get_all(%Socket{} = socket, keys) do
-    with {:ok, response} <-
-           socket.channel
-           |> Stub.get_all(
-             Schema.KeyListRequest.new(keys: keys),
-             metadata: metadata(socket)
-           ) do
-      {:ok,
-       for entri <- response.entries do
-         %{tx: entri.tx, value: entri.value}
-       end}
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+    socket |> KV.get_all(keys)
   end
 
   def get_all(_, _) do
@@ -202,36 +192,56 @@ defmodule Immudb do
     )
   end
 
-  def scan(socket) do
-    with {:ok, response} <-
-           socket.channel
-           |> Stub.scan(
-             Schema.ScanRequest.new(
-               # seekKey: params.seen_key,
-               # prefix: params.prefix,
-               # desc: params.desc,
-               # limit: params.limit,
-               # sinceTx: params.since_tx,
-               # noWait: params.no_wait
-             ),
-             metadata: metadata(socket)
-           ) do
-      for entri <- response.entries do
-        %{tx: entri.tx, value: entri.value, key: entri.key}
-      end
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+  @spec scan(Socket.t(),
+          seek_key: binary(),
+          prefix: binary(),
+          desc: binary(),
+          limit: integer(),
+          since_tx: binary(),
+          no_wait: boolean()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Entries.t()}
+  def scan(%Socket{} = socket,
+        seek_key: seek_key,
+        prefix: prefix,
+        desc: desc,
+        limit: limit,
+        since_tx: since_tx,
+        no_wait: no_wait
+      ) do
+    socket
+    |> KV.scan(
+      seek_key: seek_key,
+      prefix: prefix,
+      desc: desc,
+      limit: limit,
+      since_tx: since_tx,
+      no_wait: no_wait
+    )
   end
 
-  def count(socket, prefix) do
-    socket.channel
-    |> Stub.count(Schema.KeyPrefix.new(prefix: prefix), metadata: metadata(socket))
+  def scan(_, _) do
+    {:error, :invalid_params}
   end
 
-  def count_all(socket) do
-    socket.channel
-    |> Stub.count_all(Protobuf.Empty.new(), metadata: metadata(socket))
+  @spec count(Socket.t(), [binary()]) ::
+          {:error, String.t() | atom()} | {:ok, EntryCount.t()}
+  def count(%Socket{} = socket, prefix) do
+    socket |> KV.count(prefix)
+  end
+
+  def count(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec count_all(Socket.t()) ::
+          {:error, String.t() | atom()} | {:ok, EntryCount.t()}
+  def count_all(%Socket{} = socket) do
+    socket |> KV.count_all()
+  end
+
+  def count_all(_) do
+    {:error, :invalid_params}
   end
 
   @spec tx_by_id(Socket.t(), binary()) ::

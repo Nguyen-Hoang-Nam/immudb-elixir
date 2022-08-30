@@ -15,7 +15,7 @@ defmodule Immudb.KVTest do
 
     assert token |> Kernel.is_bitstring()
 
-    assert {:ok, %Immudb.TxMetaData{}} =
+    assert {:ok, %Immudb.Schemas.TxMetaData{}} =
              socket
              |> Immudb.set("test_#{:os.system_time(:millisecond)}", "value")
   end
@@ -49,7 +49,7 @@ defmodule Immudb.KVTest do
 
     assert token |> Kernel.is_bitstring()
 
-    assert {:ok, %Immudb.VerifiableTx{}} =
+    assert {:ok, %Immudb.Schemas.VerifiableTx{}} =
              socket
              |> Immudb.verifiable_set("test_#{:os.system_time(:millisecond)}", "value")
   end
@@ -68,11 +68,11 @@ defmodule Immudb.KVTest do
 
     key = "test_#{:os.system_time(:millisecond)}"
 
-    assert {:ok, %Immudb.TxMetaData{}} =
+    assert {:ok, %Immudb.Schemas.TxMetaData{}} =
              socket
              |> Immudb.set(key, "value")
 
-    assert {:ok, %Immudb.Entry{}} = socket |> Immudb.get(key)
+    assert {:ok, %Immudb.Schemas.Entry{}} = socket |> Immudb.get(key)
   end
 
   test "Verifiable Get" do
@@ -89,11 +89,11 @@ defmodule Immudb.KVTest do
 
     key = "test_#{:os.system_time(:millisecond)}"
 
-    assert {:ok, %Immudb.TxMetaData{}} =
+    assert {:ok, %Immudb.Schemas.TxMetaData{}} =
              socket
              |> Immudb.set(key, "value")
 
-    assert {:ok, %Immudb.VerifiableEntry{}} = socket |> Immudb.verifiable_get(key)
+    assert {:ok, %Immudb.Schemas.VerifiableEntry{}} = socket |> Immudb.verifiable_get(key)
   end
 
   test "Set all" do
@@ -108,7 +108,7 @@ defmodule Immudb.KVTest do
 
     assert token |> Kernel.is_bitstring()
 
-    assert {:ok, %Immudb.TxMetaData{}} =
+    assert {:ok, %Immudb.Schemas.TxMetaData{}} =
              socket
              |> Immudb.set_all([
                {"test_1_#{:os.system_time(:millisecond)}", "value 1"},
@@ -131,15 +131,13 @@ defmodule Immudb.KVTest do
     key1 = "test_1_#{:os.system_time(:millisecond)}"
     key2 = "test_2_#{:os.system_time(:millisecond)}"
 
-    assert {:ok, %Immudb.TxMetaData{}} =
+    assert {:ok, %Immudb.Schemas.TxMetaData{}} =
              socket
              |> Immudb.set_all([
                {key1, "value 1"},
                {key2, "value 2"}
              ])
 
-    assert {:ok, v} = socket |> Immudb.get_all([key1, key2])
-
-    v |> inspect() |> Logger.error()
+    assert {:ok, %Immudb.Schemas.Entries{}} = socket |> Immudb.get_all([key1, key2])
   end
 end
