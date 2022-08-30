@@ -214,6 +214,16 @@ defmodule Immudb.KV do
   def count(%Socket{channel: %GRPC.Channel{} = channel, token: token}, prefix) do
     channel
     |> Stub.count(Schema.KeyPrefix.new(prefix: prefix), metadata: token |> Util.metadata())
+    |> case do
+      {:ok, %{count: count}} ->
+        {:ok, %Immudb.Schemas.EntryCount{count: count}}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
   end
 
   def count(_, _) do
@@ -225,9 +235,133 @@ defmodule Immudb.KV do
   def count_all(%Socket{channel: %GRPC.Channel{} = channel, token: token}) do
     channel
     |> Stub.count_all(Protobuf.Empty.new(), metadata: token |> Util.metadata())
+    |> case do
+      {:ok, %{count: count}} ->
+        {:ok, %Immudb.Schemas.EntryCount{count: count}}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
   end
 
   def count_all(_) do
+    {:error, :invalid_params}
+  end
+
+  @spec tx_scan(Socket.t(), initial_tx: integer(), limit: integer(), desc: boolean()) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.TxList.t()}
+  def tx_scan(%Socket{channel: %GRPC.Channel{} = channel, token: token},
+        initial_tx: initial_tx,
+        limit: limit,
+        desc: desc
+      ) do
+    channel
+    |> Stub.tx_scan(
+      Schema.TxScanRequest.new(
+        initialTx: initial_tx,
+        limit: limit,
+        desc: desc
+      ),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, %{txs: txs}} ->
+        {:ok, %Immudb.Schemas.TxList{txs: txs}}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def tx_scan(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec history(Socket.t(), binary(),
+          offset: integer(),
+          limit: integer(),
+          desc: boolean(),
+          since_tx: integer()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.Entries.t()}
+  def history(%Socket{channel: %GRPC.Channel{} = channel, token: token}, key,
+        offset: offset,
+        limit: limit,
+        desc: desc,
+        since_tx: since_tx
+      ) do
+    channel
+    |> Stub.history(
+      Schema.HistoryRequest.new(
+        key: key,
+        offset: offset,
+        limit: limit,
+        desc: desc,
+        sinceTx: since_tx
+      ),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, v} ->
+        {:ok, v |> Immudb.Schemas.Entries.convert()}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def history(_, _, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec set_reference(Socket.t(),
+          key: binary(),
+          referenced_key: binary(),
+          at_tx: integer(),
+          bound_ref: boolean(),
+          no_wait: boolean()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.TxMetaData.t()}
+  def set_reference(%Socket{channel: %GRPC.Channel{} = channel, token: token},
+        key: key,
+        referenced_key: referenced_key,
+        at_tx: at_tx,
+        bound_ref: bound_ref,
+        no_wait: no_wait
+      ) do
+    channel
+    |> Stub.set_reference(
+      Schema.ReferenceRequest.new(
+        key: key,
+        referencedKey: referenced_key,
+        atTx: at_tx,
+        boundRef: bound_ref,
+        noWait: no_wait
+      ),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, v} ->
+        {:ok, v |> Immudb.Schemas.TxMetaData.convert()}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def set_reference(_, _) do
     {:error, :invalid_params}
   end
 end

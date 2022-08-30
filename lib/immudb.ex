@@ -36,12 +36,8 @@ defmodule Immudb do
 
   @spec list_users(Socket.t()) ::
           {:error, String.t() | atom()} | {:ok, [User.t()]}
-  def list_users(%Socket{} = socket) do
+  def list_users(socket) do
     socket |> Client.list_users()
-  end
-
-  def list_users(_) do
-    {:error, :invalid_params}
   end
 
   @spec create_user(Socket.t(),
@@ -51,7 +47,7 @@ defmodule Immudb do
           permission: atom()
         ) ::
           {:error, String.t() | atom()} | {:ok, nil}
-  def create_user(%Socket{} = socket,
+  def create_user(socket,
         user: user,
         password: password,
         database: database,
@@ -66,17 +62,13 @@ defmodule Immudb do
     )
   end
 
-  def create_user(_) do
-    {:error, :invalid_params}
-  end
-
   @spec change_password(Socket.t(),
           user: String.t(),
           old_password: String.t(),
           new_password: String.t()
         ) ::
           {:error, String.t() | atom()} | {:ok, String.t()}
-  def change_password(%Socket{} = socket,
+  def change_password(socket,
         user: user,
         old_password: old_password,
         new_password: new_password
@@ -103,94 +95,62 @@ defmodule Immudb do
     channel |> Client.login(user, password)
   end
 
-  def login(_, _, _) do
-    {:error, :invalid_params}
-  end
-
   @spec logout(Socket.t()) ::
           {:error, String.t() | atom()} | {:ok, nil}
-  def logout(%Socket{} = socket) do
+  def logout(socket) do
     socket |> Client.logout()
-  end
-
-  def logout(_) do
-    {:error, :invalid_params}
   end
 
   @spec set(Socket.t(), binary(), binary()) ::
           {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
-  def set(%Socket{} = socket, key, value)
+  def set(socket, key, value)
       when key |> is_binary() and value |> is_binary() do
     socket |> KV.set(key, value)
   end
 
-  def set(_, _, _) do
-    {:error, :invalid_params}
-  end
-
   @spec verifiable_set(Socket.t(), binary(), binary()) ::
           {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
-  def verifiable_set(%Socket{} = socket, key, value)
+  def verifiable_set(socket, key, value)
       when key |> is_binary() and value |> is_binary() do
     socket |> KV.verifiable_set(key, value)
   end
 
-  def verifiable_set(_, _, _) do
-    {:error, :invalid_params}
-  end
-
   @spec get(Socket.t(), binary()) ::
           {:error, String.t() | atom()} | {:ok, Entry.t()}
-  def get(%Socket{} = socket, key)
+  def get(socket, key)
       when key |> is_binary() do
     socket |> KV.get(key)
   end
 
-  def get(_, _) do
-    {:error, :invalid_params}
-  end
-
   @spec verifiable_get(Socket.t(), binary()) ::
           {:error, String.t() | atom()} | {:ok, VerifiableEntry.t()}
-  def verifiable_get(%Socket{} = socket, key)
+  def verifiable_get(socket, key)
       when key |> is_binary() do
     socket |> KV.verifiable_get(key)
   end
 
-  def verifiable_get(_, _) do
-    {:error, :invalid_params}
-  end
-
   @spec set_all(Socket.t(), [{binary(), binary()}]) ::
           {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
-  def set_all(%Socket{} = socket, kvs) do
+  def set_all(socket, kvs) do
     socket |> KV.set_all(kvs)
-  end
-
-  def set_all(_, _) do
-    {:error, :invalid_params}
   end
 
   @spec get_all(Socket.t(), [binary()]) ::
           {:error, String.t() | atom()} | {:ok, Entries.t()}
-  def get_all(%Socket{} = socket, keys) do
+  def get_all(socket, keys) do
     socket |> KV.get_all(keys)
   end
 
-  def get_all(_, _) do
-    {:error, :invalid_params}
-  end
-
-  def exec_all(socket, params) do
-    socket.channel
-    |> Stub.exec_all(
-      Schema.ExecAllRequest.new(
-        Operations: Schema.Op.new(nil),
-        noWait: params.no_wait
-      ),
-      metadata: metadata(socket)
-    )
-  end
+  # def exec_all(socket, params) do
+  #   socket.channel
+  #   |> Stub.exec_all(
+  #     Schema.ExecAllRequest.new(
+  #       Operations: Schema.Op.new(nil),
+  #       noWait: params.no_wait
+  #     ),
+  #     metadata: metadata(socket)
+  #   )
+  # end
 
   @spec scan(Socket.t(),
           seek_key: binary(),
@@ -201,7 +161,7 @@ defmodule Immudb do
           no_wait: boolean()
         ) ::
           {:error, String.t() | atom()} | {:ok, Entries.t()}
-  def scan(%Socket{} = socket,
+  def scan(socket,
         seek_key: seek_key,
         prefix: prefix,
         desc: desc,
@@ -220,72 +180,58 @@ defmodule Immudb do
     )
   end
 
-  def scan(_, _) do
-    {:error, :invalid_params}
-  end
-
   @spec count(Socket.t(), [binary()]) ::
           {:error, String.t() | atom()} | {:ok, EntryCount.t()}
-  def count(%Socket{} = socket, prefix) do
+  def count(socket, prefix) do
     socket |> KV.count(prefix)
-  end
-
-  def count(_, _) do
-    {:error, :invalid_params}
   end
 
   @spec count_all(Socket.t()) ::
           {:error, String.t() | atom()} | {:ok, EntryCount.t()}
-  def count_all(%Socket{} = socket) do
+  def count_all(socket) do
     socket |> KV.count_all()
-  end
-
-  def count_all(_) do
-    {:error, :invalid_params}
   end
 
   @spec tx_by_id(Socket.t(), binary()) ::
           {:error, String.t() | atom()} | {:ok, nil}
-  def tx_by_id(%Socket{} = socket, tx) do
+  def tx_by_id(socket, tx) do
     socket |> Tx.tx_by_id(tx)
-  end
-
-  def tx_by_id(_, _) do
-    {:error, :invalid_params}
   end
 
   @spec verifiable_tx_by_id(Socket.t(), binary(), binary()) ::
           {:error, String.t() | atom()} | {:ok, nil}
-  def verifiable_tx_by_id(%Socket{} = socket, tx, prove_since_tx) do
+  def verifiable_tx_by_id(socket, tx, prove_since_tx) do
     socket |> Tx.verifiable_tx_by_id(tx, prove_since_tx)
   end
 
-  def verifiable_tx_by_id(_, _, _) do
-    {:error, :invalid_params}
+  @spec tx_scan(Socket.t(), initial_tx: integer(), limit: integer(), desc: boolean()) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.TxList.t()}
+  def tx_scan(socket, initial_tx: initial_tx, limit: limit, desc: desc) do
+    socket |> KV.tx_scan(initial_tx: initial_tx, limit: limit, desc: desc)
   end
 
-  def tx_scan(socket, params) do
-    socket.channel
-    |> Stub.tx_scan(
-      Schema.TxScanRequest.new(
-        initialTx: params.initial_tx,
-        limit: params.limit,
-        desc: params.desc
-      ),
-      metadata: metadata(socket)
-    )
-  end
-
-  def history(socket, key) do
+  @spec history(Socket.t(), binary(),
+          offset: integer(),
+          limit: integer(),
+          desc: boolean(),
+          since_tx: integer()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.Entries.t()}
+  def history(socket, key,
+        offset: offset,
+        limit: limit,
+        desc: desc,
+        since_tx: since_tx
+      ) do
     with {:ok, response} <-
            socket.channel
            |> Stub.history(
              Schema.HistoryRequest.new(
-               key: key
-               # offset: params.offset,
-               # limit: params.limit,
-               # desc: params.desc,
-               # sinceTx: params.since_tx
+               key: key,
+               offset: offset,
+               limit: limit,
+               desc: desc,
+               sinceTx: since_tx
              ),
              metadata: metadata(socket)
            ) do
@@ -340,16 +286,28 @@ defmodule Immudb do
     {:error, :invalid_params}
   end
 
-  def set_reference(channel, params) do
-    channel
-    |> Stub.set_reference(
-      Schema.ReferenceRequest.new(
-        key: params.key,
-        referencedKey: params.referenced_key,
-        atTx: params.at_tx,
-        boundRef: params.bound_ref,
-        noWait: params.no_wait
-      )
+  @spec set_reference(Socket.t(),
+          key: binary(),
+          referenced_key: binary(),
+          at_tx: integer(),
+          bound_ref: boolean(),
+          no_wait: boolean()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.TxMetaData.t()}
+  def set_reference(socket,
+        key: key,
+        referenced_key: referenced_key,
+        at_tx: at_tx,
+        bound_ref: bound_ref,
+        no_wait: no_wait
+      ) do
+    socket
+    |> KV.set_reference(
+      key: key,
+      referenced_key: referenced_key,
+      at_tx: at_tx,
+      bound_ref: bound_ref,
+      no_wait: no_wait
     )
   end
 
