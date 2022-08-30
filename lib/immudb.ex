@@ -388,37 +388,41 @@ defmodule Immudb do
 
   @spec create_database(Socket.t(), binary()) ::
           {:error, String.t() | atom()} | {:ok, nil}
-  def create_database(%Socket{} = socket, database_name) do
+  def create_database(socket, database_name) do
     socket |> Database.create_database(database_name)
-  end
-
-  def create_database(_, _) do
-    {:error, :invalid_params}
   end
 
   @spec list_databases(Socket.t()) ::
           {:error, String.t() | atom()} | {:ok, nil}
-  def list_databases(%Socket{} = socket) do
+  def list_databases(socket) do
     socket |> Database.list_database()
-  end
-
-  def list_database(_) do
-    {:error, :invalid_params}
   end
 
   @spec use_database(Socket.t(), database_name: String.t()) ::
           {:error, String.t()} | {:ok, String.t()}
-  def use_database(%Socket{} = socket, database_name) do
+  def use_database(socket, database_name) do
     socket |> Database.use_database(database_name)
   end
 
-  def use_database(_, _) do
-    {:error, :invalid_params}
+  @spec compact_index(Socket.t()) ::
+          {:error, String.t()} | {:ok, nil}
+  def compact_index(%Socket{channel: %GRPC.Channel{} = channel, token: token}) do
+    channel
+    |> Stub.compact_index(Protobuf.Empty.new(), metadata: token |> Util.metadata())
+    |> case do
+      {:ok, _} ->
+        {:ok, nil}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
   end
 
-  def compact_index(channel) do
-    channel
-    |> Stub.compact_index(Protobuf.Empty.new())
+  def compact_index(_, _) do
+    {:error, :invalid_params}
   end
 
   def change_permission(channel, params) do
