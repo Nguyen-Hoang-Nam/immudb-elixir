@@ -103,29 +103,25 @@ defmodule Immudb do
 
   @spec set(Socket.t(), binary(), binary()) ::
           {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
-  def set(socket, key, value)
-      when key |> is_binary() and value |> is_binary() do
+  def set(socket, key, value) do
     socket |> KV.set(key, value)
   end
 
   @spec verifiable_set(Socket.t(), binary(), binary()) ::
           {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
-  def verifiable_set(socket, key, value)
-      when key |> is_binary() and value |> is_binary() do
+  def verifiable_set(socket, key, value) do
     socket |> KV.verifiable_set(key, value)
   end
 
   @spec get(Socket.t(), binary()) ::
           {:error, String.t() | atom()} | {:ok, Entry.t()}
-  def get(socket, key)
-      when key |> is_binary() do
+  def get(socket, key) do
     socket |> KV.get(key)
   end
 
   @spec verifiable_get(Socket.t(), binary()) ::
           {:error, String.t() | atom()} | {:ok, VerifiableEntry.t()}
-  def verifiable_get(socket, key)
-      when key |> is_binary() do
+  def verifiable_get(socket, key) do
     socket |> KV.verifiable_get(key)
   end
 

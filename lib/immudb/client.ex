@@ -90,7 +90,7 @@ defmodule Immudb.Client do
     |> Stub.list_users(Google.Protobuf.Empty.new(), metadata: token |> Util.metadata())
     |> case do
       {:ok, %{users: users}} ->
-        {:ok, users |> Immudb.User.convert()}
+        {:ok, users |> Immudb.Schemas.User.convert()}
 
       {:error, %GRPC.RPCError{message: message}} ->
         {:error, message}
@@ -122,7 +122,7 @@ defmodule Immudb.Client do
       Schema.CreateUserRequest.new(
         user: user,
         password: password,
-        permission: permission |> Immudb.Permission.to_int(),
+        permission: permission |> Immudb.Schemas.Permission.to_int(),
         database: database
       ),
       metadata: token |> Util.metadata()
