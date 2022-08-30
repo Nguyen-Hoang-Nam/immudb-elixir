@@ -1,30 +1,31 @@
 defmodule ImmudbTest do
   use ExUnit.Case
 
-  require Logger
+  test "Key value" do
+    assert {:ok, immudb} = Immudb.new(url: "immudb://immudb:immudb@localhost:3322/defaultdb")
 
-  test "New connection" do
-    {ok, _} =
-      Immudb.new(
-        host: "localhost",
-        port: 3322,
-        username: "immudb",
-        password: "immudb",
-        database: "defaultdb"
-      )
+    assert :ok =
+             immudb
+             |> Immudb.set("Hello", "World")
 
-    assert ok == :ok
-  end
+    assert {:ok, "World"} =
+             immudb
+             |> Immudb.get("Hello")
 
-  test "New connection 2" do
-    {ok, _} = Immudb.new(url: "immudb://immudb:immudb@localhost:3322/defaultdb")
+    assert {:ok, "World"} =
+             immudb
+             |> Immudb.verifiable_get("Hello")
 
-    assert ok == :ok
-  end
+    assert :ok =
+             immudb
+             |> Immudb.verifiable_set("Hello_1", "World_1")
 
-  test "List users" do
-    {ok, immudb} = Immudb.new(url: "immudb://immudb:immudb@localhost:3322/defaultdb")
+    assert {:ok, "World_1"} =
+             immudb
+             |> Immudb.verifiable_get("Hello_1")
 
-    assert ok == :ok
+    assert {:ok, "World_1"} =
+             immudb
+             |> Immudb.get("Hello_1")
   end
 end
