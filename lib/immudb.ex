@@ -7,10 +7,14 @@ defmodule Immudb do
   alias Immudb.Client
   alias Immudb.Socket
   alias Immudb.KV
-  alias Immudb.VerifiableTx
-  alias Immudb.Entry
-  alias Immudb.VerifiableEntry
-  alias Immudb.TxMetaData
+  alias Immudb.Tx
+  alias Immudb.Schemas.VerifiableTx
+  alias Immudb.Schemas.Entry
+  alias Immudb.Schemas.VerifiableEntry
+  alias Immudb.Schemas.TxMetaData
+  alias Immudb.Util
+  alias Immudb.Database
+  alias Immudb.Sql
 
   @spec new(url: String.t()) :: {:ok, Socket.t()} | {:error, String.t()}
   @spec new(
@@ -161,7 +165,13 @@ defmodule Immudb do
     socket |> KV.set_all(kvs)
   end
 
-  def get_all(socket, keys) do
+  def set_all(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec get_all(Socket.t(), [binary()]) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def get_all(%Socket{} = socket, keys) do
     with {:ok, response} <-
            socket.channel
            |> Stub.get_all(
@@ -175,6 +185,10 @@ defmodule Immudb do
     else
       {:error, %GRPC.RPCError{message: message}} -> {:error, message}
     end
+  end
+
+  def get_all(_, _) do
+    {:error, :invalid_params}
   end
 
   def exec_all(socket, params) do
@@ -220,20 +234,24 @@ defmodule Immudb do
     |> Stub.count_all(Protobuf.Empty.new(), metadata: metadata(socket))
   end
 
-  def tx_by_id(socket, params) do
-    socket.channel
-    |> Stub.tx_by_id(Schema.TxRequest.new(tx: params.tx), metadata: metadata(socket))
+  @spec tx_by_id(Socket.t(), binary()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def tx_by_id(%Socket{} = socket, tx) do
+    socket |> Tx.tx_by_id(tx)
   end
 
-  def verifiable_tx_by_id(socket, params) do
-    socket.channel
-    |> Stub.verifiable_tx_by_id(
-      Schema.VerifiableTxRequest.new(
-        tx: params.tx,
-        proveSinceTx: params.prove_since_tx
-      ),
-      metadata: metadata(socket)
-    )
+  def tx_by_id(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec verifiable_tx_by_id(Socket.t(), binary(), binary()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def verifiable_tx_by_id(%Socket{} = socket, tx, prove_since_tx) do
+    socket |> Tx.verifiable_tx_by_id(tx, prove_since_tx)
+  end
+
+  def verifiable_tx_by_id(_, _, _) do
+    {:error, :invalid_params}
   end
 
   def tx_scan(socket, params) do
@@ -270,14 +288,46 @@ defmodule Immudb do
     end
   end
 
-  def health(socket) do
-    socket.channel
+  @spec health(Socket.t()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def health(%Socket{channel: %GRPC.Channel{} = channel}) do
+    channel
     |> Stub.health(Protobuf.Empty.new())
+    |> case do
+      {:ok, v} ->
+        {:ok, v}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
   end
 
-  def current_state(socket) do
-    socket.channel
-    |> Stub.current_state(Protobuf.Empty.new(), metadata: metadata(socket))
+  def health(_) do
+    {:error, :invalid_params}
+  end
+
+  @spec current_state(Socket.t()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def current_state(%Socket{channel: %GRPC.Channel{} = channel, token: token}) do
+    channel
+    |> Stub.current_state(Protobuf.Empty.new(), metadata: token |> Util.metadata())
+    |> case do
+      {:ok, v} ->
+        {:ok, v}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def current_state(_) do
+    {:error, :invalid_params}
   end
 
   def set_reference(channel, params) do
@@ -361,41 +411,34 @@ defmodule Immudb do
     )
   end
 
-  def create_database(socket, database_name) do
-    with {:ok, _} <-
-           socket.channel
-           |> Stub.create_database(Schema.Database.new(databaseName: database_name),
-             metadata: metadata(socket)
-           ) do
-      :ok
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+  @spec create_database(Socket.t(), binary()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def create_database(%Socket{} = socket, database_name) do
+    socket |> Database.create_database(database_name)
   end
 
-  def list_databases(socket) do
-    with {:ok, response} <-
-           socket.channel
-           |> Stub.database_list(Protobuf.Empty.new(), metadata: metadata(socket)) do
-      {:ok,
-       for database <- response.databases do
-         database.databaseName
-       end}
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+  def create_database(_, _) do
+    {:error, :invalid_params}
   end
 
-  def use_database(socket, database_name) do
-    with {:ok, response} <-
-           socket.channel
-           |> Stub.use_database(Schema.Database.new(databaseName: database_name),
-             metadata: metadata(socket)
-           ) do
-      {:ok, response.token}
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+  @spec list_databases(Socket.t()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def list_databases(%Socket{} = socket) do
+    socket |> Database.list_database()
+  end
+
+  def list_database(_) do
+    {:error, :invalid_params}
+  end
+
+  @spec use_database(Socket.t(), database_name: String.t()) ::
+          {:error, String.t()} | {:ok, String.t()}
+  def use_database(%Socket{} = socket, database_name) do
+    socket |> Database.use_database(database_name)
+  end
+
+  def use_database(_, _) do
+    {:error, :invalid_params}
   end
 
   def compact_index(channel) do
@@ -467,101 +510,63 @@ defmodule Immudb do
     )
   end
 
-  def sql_exec(socket, sql) do
-    socket.channel
-    |> Stub.sql_exec(
-      Schema.SQLExecRequest.new(sql: sql),
-      metadata: metadata(socket)
-    )
+  @spec sql_exec(Socket.t(), String.t()) ::
+          {:error, String.t()} | {:ok, nil}
+  def sql_exec(%Socket{} = socket, sql) do
+    socket |> Sql.sql_exec(sql)
   end
 
-  defp sql_value(value) when is_nil(value) do
-    Schema.SQLValue.new(value: {:null, Protobuf.NullValue})
+  def sql_exec(_, _) do
+    {:error, :invalid_params}
   end
 
-  defp sql_value(value) when is_number(value) do
-    Schema.SQLValue.new(value: {:n, value})
+  @spec sql_exec(Socket.t(), String.t(), [{String.t(), String.t()}]) ::
+          {:error, String.t()} | {:ok, nil}
+  def sql_exec(%Socket{} = socket, sql, kvs) do
+    socket |> Sql.sql_exec(sql, kvs)
   end
 
-  defp sql_value(value) when is_binary(value) do
-    Schema.SQLValue.new(value: {:s, value})
+  def sql_exec(_, _, _) do
+    {:error, :invalid_params}
   end
 
-  defp sql_value(value) when is_boolean(value) do
-    Schema.SQLValue.new(value: {:b, value})
+  @spec sql_query(Socket.t(), String.t(), [{String.t(), String.t()}]) ::
+          {:error, String.t()} | {:ok, nil}
+  def sql_query(%Socket{} = socket, sql, kvs) do
+    socket |> Sql.sql_query(sql, kvs)
   end
 
-  defp sql_value(value) when is_bitstring(value) do
-    Schema.SQLValue.new(value: {:bs, value})
+  def sql_query(_, _, _) do
+    {:error, :invalid_params}
   end
 
-  def sql_exec(socket, sql, params) do
-    with {:ok, _} <-
-           socket.channel
-           |> Stub.sql_exec(
-             Schema.SQLExecRequest.new(
-               sql: sql,
-               params:
-                 for {key, value} <- params do
-                   Schema.NamedParam.new(name: Atom.to_string(key), value: sql_value(value))
-                 end
-             ),
-             metadata: metadata(socket)
-           ) do
-      :ok
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+  @spec list_tables(Socket.t()) ::
+          {:error, String.t()} | {:ok, nil}
+  def list_tables(%Socket{} = socket) do
+    socket |> Sql.list_tables()
   end
 
-  def sql_query(socket, sql, params) do
-    with {:ok, response} <-
-           socket.channel
-           |> Stub.sql_query(
-             Schema.SQLQueryRequest.new(
-               sql: sql,
-               params:
-                 for {key, value} <- params do
-                   Schema.NamedParam.new(name: Atom.to_string(key), value: sql_value(value))
-                 end
-             ),
-             metadata: metadata(socket)
-           ) do
-      {:ok, response.rows}
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+  def list_tables(_) do
+    {:error, :invalid_params}
   end
 
-  def list_tables(socket) do
-    with {:ok, response} <-
-           socket.channel
-           |> Stub.list_tables(Protobuf.Empty.new(), metadata: metadata(socket)) do
-      {:ok, response}
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+  @spec describe_table(Socket.t(), String.t()) ::
+          {:error, String.t()} | {:ok, nil}
+  def describe_table(%Socket{} = socket, table_name) do
+    socket |> Sql.describe_table(table_name)
   end
 
-  def describe_table(socket, table_name) do
-    socket.channel
-    |> Stub.describe_table(Schema.Table.new(tableName: table_name), metadata: metadata(socket))
+  def describe_table(_, _) do
+    {:error, :invalid_params}
   end
 
-  def verifiable_sql_get(socket, params) do
-    socket.channel
-    |> Stub.verifiable_sql_get(
-      Schema.VerifiableSQLGetRequest.new(
-        sqlGetRequest:
-          Schema.SQLGetRequest.new(
-            table: params.table,
-            pkValue: Schema.SQLValue.new(nil),
-            atTx: params.at_tx,
-            sinceTx: params.since_tx
-          ),
-        proveSinceTx: params.prove_since_tx
-      ),
-      metadata: metadata(socket)
-    )
+  @spec verifiable_sql_get(Socket.t(), map()) ::
+          {:error, String.t()} | {:ok, nil}
+  def verifiable_sql_get(%Socket{} = socket, params) do
+    socket |> Sql.verifiable_sql_get(params)
+  end
+
+  def verifiable_sql_get(_, _) do
+    {:error, :invalid_params}
   end
 end

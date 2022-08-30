@@ -1,8 +1,8 @@
-defmodule Immudb.VerifiableTx do
+defmodule Immudb.Schemas.VerifiableTx do
   @type t :: %__MODULE__{
-          dual_proof: Immudb.DualProof.t(),
+          dual_proof: Immudb.Schemas.DualProof.t(),
           signature: binary(),
-          tx: Immudb.Tx.t()
+          tx: Immudb.Schemas.Tx.t()
         }
   defstruct dual_proof: nil,
             signature: nil,
@@ -13,10 +13,10 @@ defmodule Immudb.VerifiableTx do
         signature: signature,
         tx: tx
       }) do
-    %Immudb.VerifiableTx{
-      dual_proof: dual_proof |> Immudb.DualProof.convert(),
+    %Immudb.Schemas.VerifiableTx{
+      dual_proof: dual_proof |> Immudb.Schemas.DualProof.convert(),
       signature: signature,
-      tx: tx |> Immudb.Tx.convert()
+      tx: tx |> Immudb.Schemas.Tx.convert()
     }
   end
 end

@@ -3,9 +3,9 @@ defmodule Immudb.KV do
   alias Immudb.Util
   alias Immudb.Schema
   alias Immudb.Schema.ImmuService.Stub
-  alias Immudb.TxMetaData
-  alias Immudb.VerifiableTx
-  alias Immudb.Entry
+  alias Immudb.Schemas.TxMetaData
+  alias Immudb.Schemas.VerifiableTx
+  alias Immudb.Schemas.Entry
 
   @spec set(Socket.t(), binary(), binary()) ::
           {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
@@ -18,7 +18,7 @@ defmodule Immudb.KV do
     )
     |> case do
       {:ok, v} ->
-        {:ok, v |> Immudb.TxMetaData.convert()}
+        {:ok, v |> Immudb.Schemas.TxMetaData.convert()}
 
       {:error, %GRPC.RPCError{message: message}} ->
         {:error, message}
@@ -45,7 +45,7 @@ defmodule Immudb.KV do
     )
     |> case do
       {:ok, v} ->
-        {:ok, v |> Immudb.VerifiableTx.convert()}
+        {:ok, v |> Immudb.Schemas.VerifiableTx.convert()}
 
       {:error, %GRPC.RPCError{message: message}} ->
         {:error, message}
@@ -70,7 +70,7 @@ defmodule Immudb.KV do
     )
     |> case do
       {:ok, v} ->
-        {:ok, v |> Immudb.Entry.convert()}
+        {:ok, v |> Immudb.Schemas.Entry.convert()}
 
       {:error, %GRPC.RPCError{message: message}} ->
         {:error, message}
@@ -95,7 +95,7 @@ defmodule Immudb.KV do
     )
     |> case do
       {:ok, v} ->
-        {:ok, v |> Immudb.VerifiableEntry.convert()}
+        {:ok, v |> Immudb.Schemas.VerifiableEntry.convert()}
 
       {:error, %GRPC.RPCError{message: message}} ->
         {:error, message}
@@ -125,7 +125,7 @@ defmodule Immudb.KV do
     )
     |> case do
       {:ok, v} ->
-        {:ok, v |> Immudb.TxMetaData.convert()}
+        {:ok, v |> Immudb.Schemas.TxMetaData.convert()}
 
       {:error, %GRPC.RPCError{message: message}} ->
         {:error, message}
@@ -133,5 +133,33 @@ defmodule Immudb.KV do
       _ ->
         {:error, :unknown}
     end
+  end
+
+  def set_all(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec get_all(Socket.t(), [{binary(), binary()}]) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def get_all(%Socket{channel: %GRPC.Channel{} = channel, token: token}, keys) do
+    channel
+    |> Stub.get_all(
+      Schema.KeyListRequest.new(keys: keys),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, v} ->
+        {:ok, v}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def get_all(_, _) do
+    {:error, :invalid_params}
   end
 end

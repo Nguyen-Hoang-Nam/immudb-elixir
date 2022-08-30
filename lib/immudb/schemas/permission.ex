@@ -1,4 +1,4 @@
-defmodule Immudb.Permission do
+defmodule Immudb.Schemas.Permission do
   @type t :: %__MODULE__{database: String.t(), permission: integer()}
   defstruct database: nil, permission: nil
 

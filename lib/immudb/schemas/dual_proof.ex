@@ -1,12 +1,12 @@
-defmodule Immudb.DualProof do
+defmodule Immudb.Schemas.DualProof do
   @type t :: %__MODULE__{
           consistency_proof: [binary()],
           inclusion_proof: [binary()],
           last_inclusion_proof: [binary()],
-          linear_proof: Immudb.LinearProof.t(),
-          source_tx_metadata: Immudb.TxMetaData.t(),
+          linear_proof: Immudb.Schemas.LinearProof.t(),
+          source_tx_metadata: Immudb.Schemas.TxMetaData.t(),
           target_bl_tx_alh: binary(),
-          target_tx_metadata: Immudb.TxMetaData.t()
+          target_tx_metadata: Immudb.Schemas.TxMetaData.t()
         }
   defstruct consistency_proof: [],
             inclusion_proof: [],
@@ -25,14 +25,14 @@ defmodule Immudb.DualProof do
         targetBlTxAlh: target_bl_tx_alh,
         targetTxMetadata: target_tx_metadata
       }) do
-    %Immudb.DualProof{
+    %Immudb.Schemas.DualProof{
       consistency_proof: consitency_proof,
       inclusion_proof: inclusion_proof,
       last_inclusion_proof: last_inclusion_proof,
-      linear_proof: linear_proof |> Immudb.LinearProof.convert(),
-      source_tx_metadata: source_tx_metadata |> Immudb.TxMetaData.convert(),
+      linear_proof: linear_proof |> Immudb.Schemas.LinearProof.convert(),
+      source_tx_metadata: source_tx_metadata |> Immudb.Schemas.TxMetaData.convert(),
       target_bl_tx_alh: target_bl_tx_alh,
-      target_tx_metadata: target_tx_metadata |> Immudb.TxMetaData.convert()
+      target_tx_metadata: target_tx_metadata |> Immudb.Schemas.TxMetaData.convert()
     }
   end
 

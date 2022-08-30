@@ -1,4 +1,4 @@
-defmodule Immudb.InclusionProof do
+defmodule Immudb.Schemas.InclusionProof do
   @type t :: %__MODULE__{
           leaf: integer(),
           terms: [binary()],
@@ -13,7 +13,7 @@ defmodule Immudb.InclusionProof do
         terms: terms,
         width: width
       }) do
-    %Immudb.InclusionProof{
+    %Immudb.Schemas.InclusionProof{
       leaf: leaf,
       terms: terms,
       width: width

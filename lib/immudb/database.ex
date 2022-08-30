@@ -5,29 +5,48 @@ defmodule Immudb.Database do
   alias Google.Protobuf
   alias Immudb.Socket
 
-  def create_database(socket, database_name) do
-    with {:ok, _} <-
-           socket.channel
-           |> Stub.create_database(Schema.Database.new(databaseName: database_name),
-             metadata: socket |> Util.metadata()
-           ) do
-      :ok
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
+  @spec create_database(Socket.t(), binary()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def create_database(%Socket{channel: %GRPC.Channel{} = channel, token: token}, database_name) do
+    channel
+    |> Stub.create_database(Schema.Database.new(databaseName: database_name),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, v} ->
+        {:ok, v}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
     end
   end
 
-  def list_databases(socket) do
-    with {:ok, response} <-
-           socket.channel
-           |> Stub.database_list(Protobuf.Empty.new(), metadata: socket |> Util.metadata()) do
-      {:ok,
-       for database <- response.databases do
-         database.databaseName
-       end}
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
+  def create_database(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec list_databases(Socket.t()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def list_databases(%Socket{channel: %GRPC.Channel{} = channel, token: token}) do
+    channel
+    |> Stub.database_list(Protobuf.Empty.new(), metadata: token |> Util.metadata())
+    |> case do
+      {:ok, v} ->
+        {:ok, v}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
     end
+  end
+
+  def list_database(_) do
+    {:error, :invalid_params}
   end
 
   @spec use_database(Socket.t(), database_name: String.t()) ::

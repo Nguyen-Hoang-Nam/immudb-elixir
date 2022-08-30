@@ -1,4 +1,4 @@
-defmodule Immudb.TxMetaData do
+defmodule Immudb.Schemas.TxMetaData do
   @type t :: %__MODULE__{
           bl_root: binary(),
           bl_tx_id: integer(),
@@ -19,7 +19,7 @@ defmodule Immudb.TxMetaData do
         prevAlh: prev_alh,
         ts: ts
       }) do
-    %Immudb.TxMetaData{
+    %Immudb.Schemas.TxMetaData{
       bl_root: bl_root,
       bl_tx_id: bl_tx_id,
       e_h: e_h,

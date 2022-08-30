@@ -1,4 +1,4 @@
-defmodule Immudb.LinearProof do
+defmodule Immudb.Schemas.LinearProof do
   @type t :: %__MODULE__{
           target_tx_id: integer(),
           source_tx_id: integer(),
@@ -9,7 +9,7 @@ defmodule Immudb.LinearProof do
             terms: []
 
   def convert(%{TargetTxId: target_tx_id, sourceTxId: source_tx_id, terms: terms}) do
-    %Immudb.LinearProof{
+    %Immudb.Schemas.LinearProof{
       target_tx_id: target_tx_id,
       source_tx_id: source_tx_id,
       terms: terms

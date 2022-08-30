@@ -1,4 +1,4 @@
-defmodule Immudb.TxEntry do
+defmodule Immudb.Schemas.TxEntry do
   @type t :: %__MODULE__{
           h_value: binary(),
           key: binary(),
@@ -11,7 +11,7 @@ defmodule Immudb.TxEntry do
             v_off: nil
 
   def convert(%{hValue: h_value, key: key, vLen: v_len, vOff: v_off}) do
-    %Immudb.TxEntry{
+    %Immudb.Schemas.TxEntry{
       h_value: h_value,
       key: key,
       v_len: v_len,

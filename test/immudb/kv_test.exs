@@ -115,4 +115,31 @@ defmodule Immudb.KVTest do
                {"test_2_#{:os.system_time(:millisecond)}", "value 2"}
              ])
   end
+
+  test "Get all" do
+    assert {:ok, %Immudb.Socket{channel: %GRPC.Channel{}, token: token} = socket} =
+             Immudb.new(
+               host: "localhost",
+               port: 3322,
+               username: "immudb",
+               password: "immudb",
+               database: "defaultdb"
+             )
+
+    assert token |> Kernel.is_bitstring()
+
+    key1 = "test_1_#{:os.system_time(:millisecond)}"
+    key2 = "test_2_#{:os.system_time(:millisecond)}"
+
+    assert {:ok, %Immudb.TxMetaData{}} =
+             socket
+             |> Immudb.set_all([
+               {key1, "value 1"},
+               {key2, "value 2"}
+             ])
+
+    assert {:ok, v} = socket |> Immudb.get_all([key1, key2])
+
+    v |> inspect() |> Logger.error()
+  end
 end

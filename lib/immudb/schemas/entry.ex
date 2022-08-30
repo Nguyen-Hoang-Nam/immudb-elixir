@@ -1,4 +1,4 @@
-defmodule Immudb.Entry do
+defmodule Immudb.Schemas.Entry do
   @type t :: %__MODULE__{
           key: binary(),
           referenced_by: binary(),
@@ -8,7 +8,7 @@ defmodule Immudb.Entry do
   defstruct key: nil, referenced_by: nil, tx: nil, value: nil
 
   def convert(%{key: key, referencedBy: referenced_by, tx: tx, value: value}) do
-    %Immudb.Entry{
+    %Immudb.Schemas.Entry{
       key: key,
       referenced_by: referenced_by,
       tx: tx,
