@@ -219,25 +219,13 @@ defmodule Immudb do
         desc: desc,
         since_tx: since_tx
       ) do
-    with {:ok, response} <-
-           socket.channel
-           |> Stub.history(
-             Schema.HistoryRequest.new(
-               key: key,
-               offset: offset,
-               limit: limit,
-               desc: desc,
-               sinceTx: since_tx
-             ),
-             metadata: metadata(socket)
-           ) do
-      {:ok,
-       for entri <- response.entries do
-         %{tx: entri.tx, value: entri.value}
-       end}
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+    socket
+    |> KV.history(key,
+      offset: offset,
+      limit: limit,
+      desc: desc,
+      since_tx: since_tx
+    )
   end
 
   @spec health(Socket.t()) ::
@@ -441,33 +429,104 @@ defmodule Immudb do
     socket |> Database.set_active_user(active: active, username: username)
   end
 
-  def stream_get(channel, params) do
-    channel
-    |> Stub.stream_get(
-      Schema.KeyRequest.new(
-        key: params.key,
-        atTx: params.at_tx,
-        sinceTx: params.since_tx
-      )
+  @spec stream_get(Socket.t(),
+          key: String.t(),
+          at_tx: integer(),
+          since_tx: integer()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def stream_get(socket,
+        key: key,
+        at_tx: at_tx,
+        since_tx: since_tx
+      ) do
+    socket
+    |> Immudb.Stream.stream_get(
+      key: key,
+      at_tx: at_tx,
+      since_tx: since_tx
     )
   end
 
   def stream_set(_channel, _params) do
   end
 
-  def stream_verifiable_get(_channel, _params) do
+  @spec stream_verifiable_get(Socket.t(),
+          key: String.t(),
+          at_tx: integer(),
+          since_tx: integer(),
+          prove_since_tx: integer()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def stream_verifiable_get(socket,
+        key: key,
+        at_tx: at_tx,
+        since_tx: since_tx,
+        prove_since_tx: prove_since_tx
+      ) do
+    socket
+    |> Immudb.Stream.stream_verifiable_get(
+      key: key,
+      at_tx: at_tx,
+      since_tx: since_tx,
+      prove_since_tx: prove_since_tx
+    )
   end
 
   def stream_verifiable_set(_channel, _params) do
   end
 
-  def stream_scan(_channel, _params) do
+  @spec stream_scan(Socket.t(),
+          seek_key: binary(),
+          prefix: binary(),
+          desc: binary(),
+          limit: integer(),
+          since_tx: binary(),
+          no_wait: boolean()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Entries.t()}
+  def stream_scan(socket,
+        seekKey: seek_key,
+        prefix: prefix,
+        desc: desc,
+        limit: limit,
+        sinceTx: since_tx,
+        noWait: no_wait
+      ) do
+    socket
+    |> Immudb.Stream.stream_scan(
+      seekKey: seek_key,
+      prefix: prefix,
+      desc: desc,
+      limit: limit,
+      sinceTx: since_tx,
+      noWait: no_wait
+    )
   end
 
   def stream_z_scan(_channel, _params) do
   end
 
-  def stream_history(_channel, _params) do
+  @spec stream_history(Socket.t(), binary(),
+          offset: integer(),
+          limit: integer(),
+          desc: boolean(),
+          since_tx: integer()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.Entries.t()}
+  def stream_history(socket, key,
+        offset: offset,
+        limit: limit,
+        desc: desc,
+        since_tx: since_tx
+      ) do
+    socket
+    |> Immudb.Stream.stream_history(key,
+      offset: offset,
+      limit: limit,
+      desc: desc,
+      since_tx: since_tx
+    )
   end
 
   def stream_exec_all(_channel, _params) do

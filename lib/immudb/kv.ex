@@ -172,7 +172,7 @@ defmodule Immudb.KV do
           since_tx: integer(),
           no_wait: boolean()
         ) ::
-          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.EntryCount.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.Entries.t()}
   def scan(%Socket{channel: %GRPC.Channel{} = channel, token: token},
         seek_key: seek_key,
         prefix: prefix,
@@ -195,7 +195,7 @@ defmodule Immudb.KV do
     )
     |> case do
       {:ok, v} ->
-        {:ok, v}
+        {:ok, v |> Immudb.Schemas.Entries.convert()}
 
       {:error, %GRPC.RPCError{message: message}} ->
         {:error, message}
