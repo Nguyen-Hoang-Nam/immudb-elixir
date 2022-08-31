@@ -72,30 +72,96 @@ defmodule Immudb.Database do
     {:error, :invalid_params}
   end
 
-  def compact_index(channel) do
+  @spec compact_index(Socket.t()) ::
+          {:error, String.t()} | {:ok, nil}
+  def compact_index(%Socket{channel: %GRPC.Channel{} = channel, token: token}) do
     channel
-    |> Stub.compact_index(Protobuf.Empty.new())
+    |> Stub.compact_index(Protobuf.Empty.new(), metadata: token |> Util.metadata())
+    |> case do
+      {:ok, _} ->
+        {:ok, nil}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
   end
 
-  def change_permission(channel, params) do
+  def compact_index(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec change_permission(Socket.t(),
+          action: :GRANT | :REVOKE,
+          username: String.t(),
+          database: String.t(),
+          permission: atom()
+        ) ::
+          {:error, String.t()} | {:ok, nil}
+  def change_permission(%Socket{channel: %GRPC.Channel{} = channel, token: token},
+        action: action,
+        username: username,
+        database: database,
+        permission: permission
+      ) do
     channel
     |> Stub.change_permission(
       Schema.ChangePermissionRequest.new(
-        action: params.action,
-        username: params.username,
-        database: params.database,
-        permission: params.permission
-      )
+        action: action,
+        username: username,
+        database: database,
+        permission: permission |> Immudb.Schemas.Permission.to_int()
+      ),
+      metadata: token |> Util.metadata()
     )
+    |> case do
+      {:ok, _} ->
+        {:ok, nil}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
   end
 
-  def set_active_user(channel, params) do
+  def change_permission(_, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec set_active_user(Socket.t(),
+          active: boolean(),
+          username: String.t()
+        ) ::
+          {:error, String.t()} | {:ok, nil}
+  def set_active_user(%Socket{channel: %GRPC.Channel{} = channel, token: token},
+        active: active,
+        username: username
+      ) do
     channel
     |> Stub.set_active_user(
       Schema.SetActiveUserRequest.new(
-        active: params.active,
-        username: params.username
-      )
+        active: active,
+        username: username
+      ),
+      metadata: token |> Util.metadata()
     )
+    |> case do
+      {:ok, _} ->
+        {:ok, nil}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def set_active_user(_, _) do
+    {:error, :invalid_params}
   end
 end

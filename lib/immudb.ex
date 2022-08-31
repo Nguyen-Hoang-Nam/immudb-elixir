@@ -406,45 +406,39 @@ defmodule Immudb do
 
   @spec compact_index(Socket.t()) ::
           {:error, String.t()} | {:ok, nil}
-  def compact_index(%Socket{channel: %GRPC.Channel{} = channel, token: token}) do
-    channel
-    |> Stub.compact_index(Protobuf.Empty.new(), metadata: token |> Util.metadata())
-    |> case do
-      {:ok, _} ->
-        {:ok, nil}
-
-      {:error, %GRPC.RPCError{message: message}} ->
-        {:error, message}
-
-      _ ->
-        {:error, :unknown}
-    end
+  def compact_index(socket) do
+    socket |> Database.compact_index()
   end
 
-  def compact_index(_, _) do
-    {:error, :invalid_params}
-  end
-
-  def change_permission(channel, params) do
-    channel
-    |> Stub.change_permission(
-      Schema.ChangePermissionRequest.new(
-        action: params.action,
-        username: params.username,
-        database: params.database,
-        permission: params.permission
-      )
+  @spec change_permission(Socket.t(),
+          action: :GRANT | :REVOKE,
+          username: String.t(),
+          database: String.t(),
+          permission: atom()
+        ) ::
+          {:error, String.t()} | {:ok, nil}
+  def change_permission(socket,
+        action: action,
+        username: username,
+        database: database,
+        permission: permission
+      ) do
+    socket
+    |> Database.change_permission(
+      action: action,
+      username: username,
+      database: database,
+      permission: permission
     )
   end
 
-  def set_active_user(channel, params) do
-    channel
-    |> Stub.set_active_user(
-      Schema.SetActiveUserRequest.new(
-        active: params.active,
-        username: params.username
-      )
-    )
+  @spec set_active_user(Socket.t(),
+          active: boolean(),
+          username: String.t()
+        ) ::
+          {:error, String.t()} | {:ok, nil}
+  def set_active_user(socket, active: active, username: username) do
+    socket |> Database.set_active_user(active: active, username: username)
   end
 
   def stream_get(channel, params) do
