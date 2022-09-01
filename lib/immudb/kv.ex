@@ -1,15 +1,11 @@
 defmodule Immudb.KV do
-  alias Google.Protobuf
+  use Immudb.Grpc, :schema
+
   alias Immudb.Socket
   alias Immudb.Util
-  alias Immudb.Schema
-  alias Immudb.Schema.ImmuService.Stub
-  alias Immudb.Schemas.TxMetaData
-  alias Immudb.Schemas.VerifiableTx
-  alias Immudb.Schemas.Entry
 
   @spec set(Socket.t(), binary(), binary()) ::
-          {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.TxMetaData.t()}
   def set(%Socket{channel: %GRPC.Channel{} = channel, token: token}, key, value)
       when key |> is_binary() and value |> is_binary() do
     channel
@@ -34,7 +30,7 @@ defmodule Immudb.KV do
   end
 
   @spec verifiable_set(Socket.t(), binary(), binary()) ::
-          {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.VerifiableTx.t()}
   def verifiable_set(%Socket{channel: %GRPC.Channel{} = channel, token: token}, key, value)
       when key |> is_binary() and value |> is_binary() do
     channel
@@ -61,7 +57,7 @@ defmodule Immudb.KV do
   end
 
   @spec get(Socket.t(), binary()) ::
-          {:error, String.t() | atom()} | {:ok, Entry.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.Entry.t()}
   def get(%Socket{channel: %GRPC.Channel{} = channel, token: token}, key)
       when key |> is_binary() do
     channel
@@ -86,7 +82,7 @@ defmodule Immudb.KV do
   end
 
   @spec verifiable_get(Socket.t(), binary()) ::
-          {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.VerifiableTx.t()}
   def verifiable_get(%Socket{channel: %GRPC.Channel{} = channel, token: token}, key)
       when key |> is_binary() do
     channel
@@ -111,7 +107,7 @@ defmodule Immudb.KV do
   end
 
   @spec set_all(Socket.t(), [{binary(), binary()}]) ::
-          {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.TxMetaData.t()}
   def set_all(%Socket{channel: %GRPC.Channel{} = channel, token: token}, kvs) do
     kvs =
       kvs

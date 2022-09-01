@@ -1,7 +1,7 @@
 defmodule Immudb.Stream do
+  use Immudb.Grpc, :schema
+
   alias Immudb.Util
-  alias Immudb.Schema
-  alias Immudb.Schema.ImmuService.Stub
   alias Immudb.Socket
 
   @spec stream_get(Socket.t(),
@@ -12,14 +12,36 @@ defmodule Immudb.Stream do
           {:error, String.t() | atom()} | {:ok, nil}
   def stream_get(%Socket{channel: %GRPC.Channel{} = channel, token: token},
         key: key,
-        at_tx: at_tx,
+        at_tx: at_tx
+      ) do
+    channel
+    |> Stub.stream_get(
+      Schema.KeyRequest.new(
+        key: key,
+        atTx: at_tx
+      ),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, v} ->
+        {:ok, v}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def stream_get(%Socket{channel: %GRPC.Channel{} = channel, token: token},
+        key: key,
         since_tx: since_tx
       ) do
     channel
     |> Stub.stream_get(
       Schema.KeyRequest.new(
         key: key,
-        atTx: at_tx,
         sinceTx: since_tx
       ),
       metadata: token |> Util.metadata()

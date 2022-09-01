@@ -1,11 +1,8 @@
 defmodule Immudb.Client do
+  use Immudb.Grpc, :schema
+
   alias Immudb.Socket
-  alias Immudb.Database
   alias Immudb.Util
-  alias Immudb.Schema
-  alias Immudb.Schema.ImmuService.Stub
-  alias Google.Protobuf
-  alias Immudb.User
 
   @spec connection(String.t(), integer) :: GRPC.Channel.t()
   defp connection(host, port) do
@@ -37,7 +34,7 @@ defmodule Immudb.Client do
          {:immudb_use_database, {:ok, token}} <-
            {:immudb_use_database,
             socket
-            |> Database.use_database(database)} do
+            |> Immudb.Database.use_database(database)} do
       {:ok, %Socket{channel: channel, token: token}}
     else
       {:grpc_connect, {:error, e}} ->
@@ -228,6 +225,48 @@ defmodule Immudb.Client do
   end
 
   def logout(_) do
+    {:error, :invalid_params}
+  end
+
+  @spec health(Socket.t()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def health(%Socket{channel: %GRPC.Channel{} = channel}) do
+    channel
+    |> Stub.health(Protobuf.Empty.new())
+    |> case do
+      {:ok, v} ->
+        {:ok, v}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def health(_) do
+    {:error, :invalid_params}
+  end
+
+  @spec current_state(Socket.t()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def current_state(%Socket{channel: %GRPC.Channel{} = channel, token: token}) do
+    channel
+    |> Stub.current_state(Protobuf.Empty.new(), metadata: token |> Util.metadata())
+    |> case do
+      {:ok, v} ->
+        {:ok, v}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def current_state(_) do
     {:error, :invalid_params}
   end
 end

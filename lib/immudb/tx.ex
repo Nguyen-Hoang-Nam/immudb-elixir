@@ -1,6 +1,6 @@
 defmodule Immudb.Tx do
-  alias Immudb.Schema
-  alias Immudb.Schema.ImmuService.Stub
+  use Immudb.Grpc, :schema
+
   alias Immudb.Socket
   alias Immudb.Util
 
@@ -53,6 +53,37 @@ defmodule Immudb.Tx do
   end
 
   def verifiable_tx_by_id(_, _, _) do
+    {:error, :invalid_params}
+  end
+
+  @spec use_snapshot(Socket.t(), integer(), integer()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def use_snapshot(
+        %Socket{channel: %GRPC.Channel{} = channel, token: token},
+        since_tx,
+        as_before_tx
+      ) do
+    channel
+    |> Stub.use_snapshot(
+      Schema.UseSnapshotRequest.new(
+        sinceTx: since_tx,
+        asBeforeTx: as_before_tx
+      ),
+      metadata: token |> Util.metadata()
+    )
+    |> case do
+      {:ok, v} ->
+        {:ok, v}
+
+      {:error, %GRPC.RPCError{message: message}} ->
+        {:error, message}
+
+      _ ->
+        {:error, :unknown}
+    end
+  end
+
+  def use_snapshot(_, _, _) do
     {:error, :invalid_params}
   end
 end

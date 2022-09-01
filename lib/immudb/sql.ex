@@ -1,7 +1,6 @@
 defmodule Immudb.Sql do
-  alias Immudb.Schema
-  alias Immudb.Schema.ImmuService.Stub
-  alias Google.Protobuf
+  use Immudb.Grpc, :schema
+
   alias Immudb.Socket
   alias Immudb.Util
 

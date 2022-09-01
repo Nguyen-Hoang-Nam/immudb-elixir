@@ -1,8 +1,7 @@
 defmodule Immudb.Database do
+  use Immudb.Grpc, :schema
+
   alias Immudb.Util
-  alias Immudb.Schema
-  alias Immudb.Schema.ImmuService.Stub
-  alias Google.Protobuf
   alias Immudb.Socket
 
   @spec create_database(Socket.t(), binary()) ::
