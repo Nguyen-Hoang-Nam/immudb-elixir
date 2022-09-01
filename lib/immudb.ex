@@ -1,22 +1,12 @@
 defmodule Immudb do
   use GRPC.Server, service: Immudb.Schema.ImmuService.Service
 
-  alias Immudb.Schema
-  alias Immudb.Schema.ImmuService.Stub
-  alias Google.Protobuf
   alias Immudb.Client
   alias Immudb.Socket
   alias Immudb.KV
   alias Immudb.Tx
-  alias Immudb.Schemas.VerifiableTx
-  alias Immudb.Schemas.Entry
-  alias Immudb.Schemas.VerifiableEntry
-  alias Immudb.Schemas.TxMetaData
-  alias Immudb.Util
   alias Immudb.Database
   alias Immudb.Sql
-  alias Immudb.Schemas.Entries
-  alias Immudb.Schemas.EntryCount
 
   @spec new(url: String.t()) :: {:ok, Socket.t()} | {:error, String.t()}
   @spec new(
@@ -28,10 +18,6 @@ defmodule Immudb do
         ) :: {:ok, Socket.t()} | {:error, String.t()}
   def new(v) do
     v |> Client.new()
-  end
-
-  defp metadata(socket) do
-    %{authorization: "Bearer #{socket.token}", content_type: "application/grpc"}
   end
 
   @spec list_users(Socket.t()) ::
@@ -81,13 +67,13 @@ defmodule Immudb do
     )
   end
 
-  def update_auth_config(%Socket{} = socket, v) do
-    socket |> Client.update_auth_config(v)
-  end
+  # def update_auth_config(%Socket{} = socket, v) do
+  #   socket |> Client.update_auth_config(v)
+  # end
 
-  def update_mtls_confg(%Socket{} = socket, v) do
-    socket |> Client.update_mtls_confg(v)
-  end
+  # def update_mtls_confg(%Socket{} = socket, v) do
+  #   socket |> Client.update_mtls_confg(v)
+  # end
 
   @spec login(Socket.t(), String.t(), String.t()) ::
           {:error, String.t() | atom()} | {:ok, String.t()}
@@ -102,37 +88,37 @@ defmodule Immudb do
   end
 
   @spec set(Socket.t(), binary(), binary()) ::
-          {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.TxMetaData.t()}
   def set(socket, key, value) do
     socket |> KV.set(key, value)
   end
 
   @spec verifiable_set(Socket.t(), binary(), binary()) ::
-          {:error, String.t() | atom()} | {:ok, VerifiableTx.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.VerifiableTx.t()}
   def verifiable_set(socket, key, value) do
     socket |> KV.verifiable_set(key, value)
   end
 
   @spec get(Socket.t(), binary()) ::
-          {:error, String.t() | atom()} | {:ok, Entry.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.Entry.t()}
   def get(socket, key) do
     socket |> KV.get(key)
   end
 
   @spec verifiable_get(Socket.t(), binary()) ::
-          {:error, String.t() | atom()} | {:ok, VerifiableEntry.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.VerifiableEntry.t()}
   def verifiable_get(socket, key) do
     socket |> KV.verifiable_get(key)
   end
 
   @spec set_all(Socket.t(), [{binary(), binary()}]) ::
-          {:error, String.t() | atom()} | {:ok, TxMetaData.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.TxMetaData.t()}
   def set_all(socket, kvs) do
     socket |> KV.set_all(kvs)
   end
 
   @spec get_all(Socket.t(), [binary()]) ::
-          {:error, String.t() | atom()} | {:ok, Entries.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.Entries.t()}
   def get_all(socket, keys) do
     socket |> KV.get_all(keys)
   end
@@ -156,7 +142,7 @@ defmodule Immudb do
           since_tx: binary(),
           no_wait: boolean()
         ) ::
-          {:error, String.t() | atom()} | {:ok, Entries.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.Entries.t()}
   def scan(socket,
         seek_key: seek_key,
         prefix: prefix,
@@ -177,13 +163,13 @@ defmodule Immudb do
   end
 
   @spec count(Socket.t(), [binary()]) ::
-          {:error, String.t() | atom()} | {:ok, EntryCount.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.EntryCount.t()}
   def count(socket, prefix) do
     socket |> KV.count(prefix)
   end
 
   @spec count_all(Socket.t()) ::
-          {:error, String.t() | atom()} | {:ok, EntryCount.t()}
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.EntryCount.t()}
   def count_all(socket) do
     socket |> KV.count_all()
   end
@@ -219,67 +205,25 @@ defmodule Immudb do
         desc: desc,
         since_tx: since_tx
       ) do
-    with {:ok, response} <-
-           socket.channel
-           |> Stub.history(
-             Schema.HistoryRequest.new(
-               key: key,
-               offset: offset,
-               limit: limit,
-               desc: desc,
-               sinceTx: since_tx
-             ),
-             metadata: metadata(socket)
-           ) do
-      {:ok,
-       for entri <- response.entries do
-         %{tx: entri.tx, value: entri.value}
-       end}
-    else
-      {:error, %GRPC.RPCError{message: message}} -> {:error, message}
-    end
+    socket
+    |> KV.history(key,
+      offset: offset,
+      limit: limit,
+      desc: desc,
+      since_tx: since_tx
+    )
   end
 
   @spec health(Socket.t()) ::
           {:error, String.t() | atom()} | {:ok, nil}
-  def health(%Socket{channel: %GRPC.Channel{} = channel}) do
-    channel
-    |> Stub.health(Protobuf.Empty.new())
-    |> case do
-      {:ok, v} ->
-        {:ok, v}
-
-      {:error, %GRPC.RPCError{message: message}} ->
-        {:error, message}
-
-      _ ->
-        {:error, :unknown}
-    end
-  end
-
-  def health(_) do
-    {:error, :invalid_params}
+  def health(socket) do
+    socket |> Client.health()
   end
 
   @spec current_state(Socket.t()) ::
           {:error, String.t() | atom()} | {:ok, nil}
-  def current_state(%Socket{channel: %GRPC.Channel{} = channel, token: token}) do
-    channel
-    |> Stub.current_state(Protobuf.Empty.new(), metadata: token |> Util.metadata())
-    |> case do
-      {:ok, v} ->
-        {:ok, v}
-
-      {:error, %GRPC.RPCError{message: message}} ->
-        {:error, message}
-
-      _ ->
-        {:error, :unknown}
-    end
-  end
-
-  def current_state(_) do
-    {:error, :invalid_params}
+  def current_state(socket) do
+    socket |> Client.current_state()
   end
 
   @spec set_reference(Socket.t(),
@@ -335,154 +279,228 @@ defmodule Immudb do
     )
   end
 
-  def z_add(channel, params) do
-    channel
-    |> Stub.z_add(
-      Schema.ZAddRequest.new(
-        set: params.set,
-        score: params.score,
-        key: params.key,
-        atTx: params.at_tx,
-        boundRef: params.bound_ref,
-        noWait: params.no_wait
-      )
-    )
-  end
+  # def z_add(channel, params) do
+  #   channel
+  #   |> Stub.z_add(
+  #     Schema.ZAddRequest.new(
+  #       set: params.set,
+  #       score: params.score,
+  #       key: params.key,
+  #       atTx: params.at_tx,
+  #       boundRef: params.bound_ref,
+  #       noWait: params.no_wait
+  #     )
+  #   )
+  # end
 
-  def verifiable_z_add(channel, params) do
-    channel
-    |> Stub.verifiable_z_add(
-      Schema.VerifiableZAddRequest.new(
-        zAddRequest:
-          Schema.ZAddRequest.new(
-            set: params.set,
-            score: params.score,
-            key: params.key,
-            atTx: params.at_tx,
-            boundRef: params.bound_ref,
-            noWait: params.no_wait
-          ),
-        proveSinceTx: params.prove_since_tx
-      )
-    )
-  end
+  # def verifiable_z_add(channel, params) do
+  #   channel
+  #   |> Stub.verifiable_z_add(
+  #     Schema.VerifiableZAddRequest.new(
+  #       zAddRequest:
+  #         Schema.ZAddRequest.new(
+  #           set: params.set,
+  #           score: params.score,
+  #           key: params.key,
+  #           atTx: params.at_tx,
+  #           boundRef: params.bound_ref,
+  #           noWait: params.no_wait
+  #         ),
+  #       proveSinceTx: params.prove_since_tx
+  #     )
+  #   )
+  # end
 
-  def z_scan(channel, params) do
-    channel
-    |> Stub.z_scan(
-      Schema.ZScanRequest.new(
-        set: params.set,
-        seekKey: params.seek_key,
-        seekScore: params.seek_score,
-        seekAtTx: params.seek_at_tx,
-        inclusiveSeek: params.inclusive_seek,
-        limit: params.limit,
-        desc: params.desc,
-        minScore: params.min_score,
-        maxScore: params.max_score,
-        sinceTx: params.since_tx,
-        noWait: params.no_wait
-      )
-    )
-  end
+  # def z_scan(channel, params) do
+  #   channel
+  #   |> Stub.z_scan(
+  #     Schema.ZScanRequest.new(
+  #       set: params.set,
+  #       seekKey: params.seek_key,
+  #       seekScore: params.seek_score,
+  #       seekAtTx: params.seek_at_tx,
+  #       inclusiveSeek: params.inclusive_seek,
+  #       limit: params.limit,
+  #       desc: params.desc,
+  #       minScore: params.min_score,
+  #       maxScore: params.max_score,
+  #       sinceTx: params.since_tx,
+  #       noWait: params.no_wait
+  #     )
+  #   )
+  # end
 
   @spec create_database(Socket.t(), binary()) ::
           {:error, String.t() | atom()} | {:ok, nil}
-  def create_database(%Socket{} = socket, database_name) do
+  def create_database(socket, database_name) do
     socket |> Database.create_database(database_name)
-  end
-
-  def create_database(_, _) do
-    {:error, :invalid_params}
   end
 
   @spec list_databases(Socket.t()) ::
           {:error, String.t() | atom()} | {:ok, nil}
-  def list_databases(%Socket{} = socket) do
+  def list_databases(socket) do
     socket |> Database.list_database()
-  end
-
-  def list_database(_) do
-    {:error, :invalid_params}
   end
 
   @spec use_database(Socket.t(), database_name: String.t()) ::
           {:error, String.t()} | {:ok, String.t()}
-  def use_database(%Socket{} = socket, database_name) do
+  def use_database(socket, database_name) do
     socket |> Database.use_database(database_name)
   end
 
-  def use_database(_, _) do
-    {:error, :invalid_params}
+  @spec compact_index(Socket.t()) ::
+          {:error, String.t()} | {:ok, nil}
+  def compact_index(socket) do
+    socket |> Database.compact_index()
   end
 
-  def compact_index(channel) do
-    channel
-    |> Stub.compact_index(Protobuf.Empty.new())
-  end
-
-  def change_permission(channel, params) do
-    channel
-    |> Stub.change_permission(
-      Schema.ChangePermissionRequest.new(
-        action: params.action,
-        username: params.username,
-        database: params.database,
-        permission: params.permission
-      )
+  @spec change_permission(Socket.t(),
+          action: :GRANT | :REVOKE,
+          username: String.t(),
+          database: String.t(),
+          permission: atom()
+        ) ::
+          {:error, String.t()} | {:ok, nil}
+  def change_permission(socket,
+        action: action,
+        username: username,
+        database: database,
+        permission: permission
+      ) do
+    socket
+    |> Database.change_permission(
+      action: action,
+      username: username,
+      database: database,
+      permission: permission
     )
   end
 
-  def set_active_user(channel, params) do
-    channel
-    |> Stub.set_active_user(
-      Schema.SetActiveUserRequest.new(
-        active: params.active,
-        username: params.username
-      )
+  @spec set_active_user(Socket.t(),
+          active: boolean(),
+          username: String.t()
+        ) ::
+          {:error, String.t()} | {:ok, nil}
+  def set_active_user(socket, active: active, username: username) do
+    socket |> Database.set_active_user(active: active, username: username)
+  end
+
+  @spec stream_get(Socket.t(),
+          key: String.t(),
+          at_tx: integer(),
+          since_tx: integer()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def stream_get(socket,
+        key: key,
+        at_tx: at_tx
+      ) do
+    socket
+    |> Immudb.Stream.stream_get(
+      key: key,
+      at_tx: at_tx
     )
   end
 
-  def stream_get(channel, params) do
-    channel
-    |> Stub.stream_get(
-      Schema.KeyRequest.new(
-        key: params.key,
-        atTx: params.at_tx,
-        sinceTx: params.since_tx
-      )
+  def stream_get(socket,
+        key: key,
+        since_tx: since_tx
+      ) do
+    socket
+    |> Immudb.Stream.stream_get(
+      key: key,
+      since_tx: since_tx
     )
   end
 
-  def stream_set(_channel, _params) do
-  end
+  # def stream_set(_channel, _params) do
+  # end
 
-  def stream_verifiable_get(_channel, _params) do
-  end
-
-  def stream_verifiable_set(_channel, _params) do
-  end
-
-  def stream_scan(_channel, _params) do
-  end
-
-  def stream_z_scan(_channel, _params) do
-  end
-
-  def stream_history(_channel, _params) do
-  end
-
-  def stream_exec_all(_channel, _params) do
-  end
-
-  def use_snapshot(channel, params) do
-    channel
-    |> Stub.use_snapshot(
-      Schema.UseSnapshotRequest.new(
-        sinceTx: params.since_tx,
-        asBeforeTx: params.as_before_tx
-      )
+  @spec stream_verifiable_get(Socket.t(),
+          key: String.t(),
+          at_tx: integer(),
+          since_tx: integer(),
+          prove_since_tx: integer()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def stream_verifiable_get(socket,
+        key: key,
+        at_tx: at_tx,
+        since_tx: since_tx,
+        prove_since_tx: prove_since_tx
+      ) do
+    socket
+    |> Immudb.Stream.stream_verifiable_get(
+      key: key,
+      at_tx: at_tx,
+      since_tx: since_tx,
+      prove_since_tx: prove_since_tx
     )
+  end
+
+  # def stream_verifiable_set(_channel, _params) do
+  # end
+
+  @spec stream_scan(Socket.t(),
+          seek_key: binary(),
+          prefix: binary(),
+          desc: binary(),
+          limit: integer(),
+          since_tx: binary(),
+          no_wait: boolean()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.Entries.t()}
+  def stream_scan(socket,
+        seekKey: seek_key,
+        prefix: prefix,
+        desc: desc,
+        limit: limit,
+        sinceTx: since_tx,
+        noWait: no_wait
+      ) do
+    socket
+    |> Immudb.Stream.stream_scan(
+      seekKey: seek_key,
+      prefix: prefix,
+      desc: desc,
+      limit: limit,
+      sinceTx: since_tx,
+      noWait: no_wait
+    )
+  end
+
+  # def stream_z_scan(_channel, _params) do
+  # end
+
+  @spec stream_history(Socket.t(), binary(),
+          offset: integer(),
+          limit: integer(),
+          desc: boolean(),
+          since_tx: integer()
+        ) ::
+          {:error, String.t() | atom()} | {:ok, Immudb.Schemas.Entries.t()}
+  def stream_history(socket, key,
+        offset: offset,
+        limit: limit,
+        desc: desc,
+        since_tx: since_tx
+      ) do
+    socket
+    |> Immudb.Stream.stream_history(key,
+      offset: offset,
+      limit: limit,
+      desc: desc,
+      since_tx: since_tx
+    )
+  end
+
+  # def stream_exec_all(_channel, _params) do
+  # end
+
+  @spec use_snapshot(Socket.t(), integer(), integer()) ::
+          {:error, String.t() | atom()} | {:ok, nil}
+  def use_snapshot(socket, since_tx, as_before_tx) do
+    socket |> Tx.use_snapshot(since_tx, as_before_tx)
   end
 
   @spec sql_exec(Socket.t(), String.t()) ::

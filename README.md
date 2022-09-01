@@ -1,20 +1,20 @@
 # Immudb Elixir
 
-The Elixir implementation of Immudb client.
+The implementation of Immudb client in Elixir.
 
 ## Installation
 
 ```elixir
 def deps do
   [
-    {:immudb_elixir, git: "https://github.com/Nguyen-Hoang-Nam/immudb-elixir.git"}
+    {:immudb_elixir, "~> 0.2.0"}
   ]
 end
 ```
 
 ## Usage
 
-### Connect to Immudb
+### Connecting to Immudb
 
 You can connect to Immudb in 2 ways
 
@@ -81,3 +81,24 @@ Query table
 immudb
 |> Immudb.sql_query("SELECT * FROM hello WHERE id == @id", %{id: 1})
 ```
+
+### TODO
+
+- [ ] update_auth_config
+- [ ] update_mtls_config
+- [ ] exec_all
+- [ ] z_add
+- [ ] verifiable_z_add
+- [ ] z_scan
+- [ ] stream
+- [ ] Test sql command
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+Please make sure to update tests as appropriate.
+
+## License
+
+[Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/)
