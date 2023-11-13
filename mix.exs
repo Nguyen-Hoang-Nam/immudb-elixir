@@ -21,7 +21,7 @@ defmodule ImmudbElixir.MixProject do
 
   defp deps do
     [
-      {:grpc, "~> 0.5.0"},
+      {:grpc, "~> 0.7.0"},
       {:cowlib, "~> 2.11.0"},
       {:protobuf, "~> 0.9.0"},
       {:google_protos, "~> 0.2"},
