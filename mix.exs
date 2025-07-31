@@ -24,7 +24,7 @@ defmodule ImmudbElixir.MixProject do
       {:grpc, "~> 0.5.0"},
       {:cowlib, "~> 2.11.0"},
       {:protobuf, "~> 0.9.0"},
-      {:google_protos, "~> 0.2"},
+      {:google_protos, "~> 0.4"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
